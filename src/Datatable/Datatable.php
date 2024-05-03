@@ -84,6 +84,7 @@ class Datatable
             'headersAttrsTh' => [],
         ],
 		'multiSelectType' => self::MULTI_SELECT_TYPE_SELECT2,
+		'stateSave' => false,
         'rowActions' => [
             'name' => 'actions',
             'orderable' => 'false',
@@ -285,6 +286,10 @@ class Datatable
         filters.appendTo('#:tagId thead');
     COLUMN_SEARCH_HEADER_CONFIGURATION;
 
+	protected $stateSaveColumnLoading = <<<STATE_SAVE_COLUMN_LOADING
+		
+	STATE_SAVE_COLUMN_LOADING;
+
     /**
      * Json template with placeholders for configuration options.
      *
@@ -314,6 +319,7 @@ class Datatable
                 pageLength: :pageLength,
                 processing: :processing,
                 serverSide: :serverSide,
+                stateSave: :stateSave,
                 //@todo: add option to select the paging type
                 //pagingType: "simple",
                 columns: [
@@ -327,12 +333,34 @@ class Datatable
                 lengthMenu: :lengthMenu,
                 //@todo add function callback in callback Datatable function
                 drawCallback: :drawCallback,
+                'stateLoadCallback': function(settings) {	return JSON.parse( localStorage.getItem( 'DataTables_' + settings.sInstance ))},
+               'stateSaveCallback': function(settings,data) { localStorage.setItem( 'DataTables_' + settings.sInstance, JSON.stringify(data))},
                 //@todo use configuration instead
-                initComplete: function () {
+                initComplete: function (settings) {
                     //onComplete
                     :onCompleteCallback
                     //column search
                     :columnSearch
+                    
+                    let data  = JSON.parse( localStorage.getItem( 'DataTables_' + settings.sInstance ));
+                    console.log(data.columns);
+
+                    
+                    for (i = 0; i < data.columns["length"]; i++) {
+                    console.log(i);
+                    console.log(data.columns[i]);
+            var col_search_val = data.columns[i].search.search;
+            console.log(col_search_val);
+            var startIndex = col_search_val.indexOf("(") + 4;
+            var endIndex = col_search_val.indexOf(")");
+            var result = col_search_val.substring(startIndex, endIndex);
+            
+            if (col_search_val !== "") {
+                
+                console.log($("select", $("thead .filters th")[i]));
+                $("select", $("thead .filters th")[i]).val(col_search_val);
+            }
+        }
                     
                     :multiSelectCallback
                 },
@@ -479,6 +507,7 @@ class Datatable
             'pageLength' => $this->getConfig('pageLength') ?? '10',
             'processing' => $this->getConfig('processing') ? 'true' : 'false',
             'serverSide' => $this->getConfig('serverSide') ? 'true' : 'false',
+			'stateSave' => $this->getConfig('stateSave') ? 'true' : 'false',
             'configColumns' => $this->configColumns,
             'definitionColumns' => $this->getConfig('definitionColumns'),
             'language' => json_encode($this->getConfig('language')),
@@ -486,6 +515,7 @@ class Datatable
             'drawCallback' => $this->getConfig('drawCallback') ? $this->getConfig('drawCallback') : 'null',
             'onCompleteCallback' => $this->getConfig('onCompleteCallback') ? $this->getConfig('onCompleteCallback') : 'null',
             'columnSearch' => $this->getConfig('columnSearch') ? $this->columnSearchTemplate : '',
+//			'stateLoadParams' => $this->stateSaveColumnLoading,
             'tableCss' => json_encode($this->getConfig('tableCss')),
 			'multiSelectCallback' => $this->getConfig('multiSelectType') === 'jquery-ui' ? $this->datatableJqueryUITemplate : $this->datatableSelect2Template,
         ];
