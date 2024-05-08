@@ -131,6 +131,7 @@ class Datatable
             var cell = $('#:tagId .filters th').eq(
                 $(api.column(colIdx).header()).index()
             );
+            console.log(columnsSearch);
             if (columnsSearch[colIdx] !== undefined) {
 
                 if (columnsSearch[colIdx].type !== undefined) {
@@ -263,6 +264,9 @@ class Datatable
                 }
             }
         });
+        
+        :stateSave
+        
     COLUMN_SEARCH_CONFIGURATION;
 
     protected $genericSearchTemplate = <<<GENERIC_SEARCH_CONFIGURATION
@@ -285,10 +289,6 @@ class Datatable
         })
         filters.appendTo('#:tagId thead');
     COLUMN_SEARCH_HEADER_CONFIGURATION;
-
-	protected $stateSaveColumnLoading = <<<STATE_SAVE_COLUMN_LOADING
-		
-	STATE_SAVE_COLUMN_LOADING;
 
     /**
      * Json template with placeholders for configuration options.
@@ -342,31 +342,21 @@ class Datatable
                     //column search
                     :columnSearch
                     
-                    let data  = JSON.parse( localStorage.getItem( 'DataTables_' + settings.sInstance ));
-                    console.log(data.columns);
-
-                    
-                    for (i = 0; i < data.columns["length"]; i++) {
-                    console.log(i);
-                    console.log(data.columns[i]);
-            var col_search_val = data.columns[i].search.search;
-            console.log(col_search_val);
-            var startIndex = col_search_val.indexOf("(") + 4;
-            var endIndex = col_search_val.indexOf(")");
-            var result = col_search_val.substring(startIndex, endIndex);
-            
-            if (col_search_val !== "") {
-                
-                console.log($("select", $("thead .filters th")[i]));
-                $("select", $("thead .filters th")[i]).val(col_search_val);
-            }
-        }
+                 	:getFilter
+        
+        			:resetFilter
                     
                     :multiSelectCallback
                 },
             });
-
+            
             dt.css(:tableCss);
+            
+            function validateDate(text) {
+                text = text.replaceAll("/","-");
+                var re = /^(\d{4}(-)\d{2}(-)\d{2}|\d{2}(-)\d{2}(-)\d{4})$/;
+                return re.test(text);
+            }
         });
     DATATABLE_CONFIGURATION;
 
@@ -378,6 +368,35 @@ class Datatable
 	protected $datatableSelect2Template = <<<SELECT2_CONFIGURATION
 			if($.fn.select2) { $(function(){ $('.form-select-multiple').select2();}); }
 	SELECT2_CONFIGURATION;
+
+	protected $datatableResetFilter = <<<SELECT2_CONFIGURATION
+			$(document).on("click",".reset-filter",function() {
+				localStorage.removeItem('DataTables_' + settings.sInstance);
+				$("thead .filters th input").val('');
+				$("thead .filters th select").val('');
+				var dtInstance = $("#" + settings.sInstance).DataTable();
+				dtInstance.columns().eq(0).each(function (colIdx) {dtInstance.column(colIdx).search('');}).draw();
+			});
+	SELECT2_CONFIGURATION;
+
+	protected $datatableGetFilter = <<<SELECT2_CONFIGURATION
+			let data  = JSON.parse( localStorage.getItem( 'DataTables_' + settings.sInstance ));
+			for (i = 0; i < data.columns["length"]; i++) {
+				var col_search_val = data.columns[i].search.search;
+				console.log(col_search_val);
+				var startIndex = col_search_val.indexOf("(") + 4;
+				var endIndex = col_search_val.indexOf(")");
+				var result = col_search_val.substring(startIndex, endIndex);
+				if (result !== "") {
+					$("select", $("thead .filters th")[i]).val(result);
+					$("input", $("thead .filters th")[i]).v	al(result);
+				}
+			}
+	SELECT2_CONFIGURATION;
+
+	protected $datatableFilterButton = <<<DATATABLE_FILTER_BUTTON
+			$('#:tagId .filters th:last').html('<i class="fa-solid fa-arrows-rotate reset-filter"></i>');
+	DATATABLE_FILTER_BUTTON;
 
 
     /**
@@ -471,6 +490,7 @@ class Datatable
                 'searchTypes' => ($this->searchHeadersTypes ?? ''),
                 'delay' => $this->getConfig('delay') ?? '3000',
                 'tagId' => $tagId,
+				'stateSave' => $this->getConfig('stateSave') ?  Text::insert($this->datatableFilterButton, ['tagId' => $tagId]) : 'null',
             ]
         );
 
@@ -515,9 +535,10 @@ class Datatable
             'drawCallback' => $this->getConfig('drawCallback') ? $this->getConfig('drawCallback') : 'null',
             'onCompleteCallback' => $this->getConfig('onCompleteCallback') ? $this->getConfig('onCompleteCallback') : 'null',
             'columnSearch' => $this->getConfig('columnSearch') ? $this->columnSearchTemplate : '',
-//			'stateLoadParams' => $this->stateSaveColumnLoading,
             'tableCss' => json_encode($this->getConfig('tableCss')),
 			'multiSelectCallback' => $this->getConfig('multiSelectType') === 'jquery-ui' ? $this->datatableJqueryUITemplate : $this->datatableSelect2Template,
+			'resetFilter' => $this->getConfig('stateSave') ? $this->datatableResetFilter : 'null',
+			'getFilter' => $this->getConfig('stateSave') ? $this->datatableGetFilter : 'null',
         ];
 
         if ($this->getConfig('createdRow')) {
