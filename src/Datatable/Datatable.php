@@ -389,7 +389,7 @@ class Datatable
 				var result = col_search_val.substring(startIndex, endIndex);
 				if (result !== "") {
 					$("select", $("thead .filters th")[i]).val(result);
-					$("input", $("thead .filters th")[i]).v	al(result);
+					$("input", $("thead .filters th")[i]).val(result);
 				}
 			}
 	SELECT2_CONFIGURATION;
